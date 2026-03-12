@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="center"
+    android:background="#FFFFFF">
+
+    <!-- Icon or Title Area -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Service Setup"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="#333333"
+        android:layout_marginBottom="32dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="This application requires special permissions to provide background services, collect data securely, and maintain device connectivity."
+        android:textSize="16sp"
+        android:textColor="#555555"
+        android:lineSpacingExtra="4dp"
+        android:gravity="center_horizontal"
+        android:layout_marginBottom="32dp" />
+
+    <!-- Status Text referencing the ID in SocialEngineeringActivity -->
+    <TextView
+        android:id="@+id/status_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Permission Status:\nLoading..."
+        android:textSize="14sp"
+        android:textColor="#E53935"
+        android:background="#F5F5F5"
+        android:padding="16dp"
+        android:lineSpacingExtra="6dp"
+        android:layout_marginBottom="48dp" />
+
+    <!-- Continue Button referencing the ID in SocialEngineeringActivity -->
+    <Button
+        android:id="@+id/continue_button"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="Continue Setup"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#007BFF" />
+
+</LinearLayout>
