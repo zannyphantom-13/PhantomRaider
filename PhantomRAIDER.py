@@ -32,8 +32,9 @@ parser.add_argument('-icon','--icon',help='Visible Icon',action='store_true')
 args = parser.parse_args()
 
 
-# Allow Python 3.6 through 3.13
-if float(platform.python_version()[:3]) < 3.6 or float(platform.python_version()[:3]) > 3.13:
+# Allow Python 3.6 through 3.13 (use sys.version_info to avoid string slice bug on 3.10+)
+py = sys.version_info
+if (py.major, py.minor) < (3, 6) or (py.major, py.minor) > (3, 13):
     print(stdOutput("error")+"\033[1mPython version should be between 3.6 to 3.13")
     sys.exit()
 
